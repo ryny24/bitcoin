@@ -1,16 +1,17 @@
-#ifndef _TIMER_H_
-#define _TIMER_H_ 1
+#ifndef _BITCOIN_TIMER_H_
+#define _BITCOIN_TIMER_H_
 
 #include <boost/thread/thread_time.hpp>
 
-class TimerJob {
+class CTimerJob
+{
 public:
-    virtual void operator()();
-    virtual ~TimerJob();
+    virtual void operator()() = 0;
+    virtual ~CTimerJob();
 };
 
 void StartTimer();
 void StopTimer();
-void AddTimerJob(TimerJob *job, const boost::system_time &dur);
+void AddTimerJob(CTimerJob *job, const boost::system_time &dur);
 
 #endif
