@@ -5,29 +5,22 @@
  * The Bitcoin Developers 2011-2012
  */
 #include "bitcoingui.h"
-#include "walletview.h"
 #include "transactiontablemodel.h"
-#include "addressbookpage.h"
-#include "sendcoinsdialog.h"
-#include "signverifymessagedialog.h"
 #include "optionsdialog.h"
 #include "aboutdialog.h"
 #include "clientmodel.h"
 #include "walletmodel.h"
 #include "walletstack.h"
-#include "editaddressdialog.h"
 #include "optionsmodel.h"
 #include "transactiondescdialog.h"
-#include "addresstablemodel.h"
-#include "transactionview.h"
-#include "overviewpage.h"
 #include "bitcoinunits.h"
 #include "guiconstants.h"
-#include "askpassphrasedialog.h"
 #include "notificator.h"
 #include "guiutil.h"
 #include "rpcconsole.h"
 #include "ui_interface.h"
+
+#include "wallet.h"
 
 #ifdef Q_OS_MAC
 #include "macdockiconhandler.h"
@@ -64,7 +57,7 @@
 BitcoinGUI::BitcoinGUI(QWidget *parent):
     QMainWindow(parent),
     clientModel(0),
-    walletView(0),
+    walletManager(0),
     encryptWalletAction(0),
     changePassphraseAction(0),
     aboutQtAction(0),
@@ -96,20 +89,42 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     // Create system tray icon and notification
     createTrayIcon();
 
-    // Create wallet list and view
+    // Create wallet list, load/unload buttons, and view
     QFrame *walletFrame = new QFrame();
     QHBoxLayout *walletFrameLayout = new QHBoxLayout(walletFrame);
     
-    // Create wallet list control
+    // Create wallet list contro, load and unload buttons
+    QFrame *listFrame = new QFrame();
+    listFrame->setMinimumWidth(200);
+    listFrame->setMaximumWidth(200);
+    QVBoxLayout *listFrameLayout = new QVBoxLayout(listFrame);
+    
+    QLabel *listFrameLabel = new QLabel();
+    listFrameLabel->setText(tr("Wallets"));
+    listFrameLabel->setAlignment(Qt::AlignHCenter);
+    listFrameLayout->addWidget(listFrameLabel);
+    
     walletList = new QListWidget();
-    walletList->setMinimumWidth(100);
-    walletList->setMaximumWidth(100);
+    listFrameLayout->addWidget(walletList);
+
+    // Create wallet load and unload buttons
+    QFrame *loadButtonFrame = new QFrame();
+    QHBoxLayout *loadButtonFrameLayout = new QHBoxLayout(loadButtonFrame);
+
+    loadWalletButton = new QPushButton("Load...");
+    unloadWalletButton = new QPushButton("Unload");
+    loadButtonFrameLayout->addWidget(loadWalletButton);
+    loadButtonFrameLayout->addWidget(unloadWalletButton);
+    listFrameLayout->addWidget(loadButtonFrame);
+    
+    connect(loadWalletButton, SIGNAL(clicked()), this, SLOT(loadWallet()));
+    connect(unloadWalletButton, SIGNAL(clicked()), this, SLOT(unloadWallet()));
     
     // Create wallet stack
     walletStack = new WalletStack(this);
     walletStack->setBitcoinGUI(this);
-    
-    walletFrameLayout->addWidget(walletList);
+
+    walletFrameLayout->addWidget(listFrame);
     walletFrameLayout->addWidget(walletStack);
     setCentralWidget(walletFrame);
 
@@ -168,6 +183,24 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 
 BitcoinGUI::~BitcoinGUI()
 {
+    // Remove wallet views from walletStack
+/*    while (QListWidgetItem *item = walletList->takeItem(0))
+    {
+        QString walletName = item->text();
+        walletStack->removeWalletView(walletName);
+        delete item;
+        WalletModel *walletModel = mapWalletModels.take(walletName);
+        delete walletModel;
+    }*/
+    
+    QMap<QString, WalletModel*>::const_iterator item = mapWalletModels.constBegin();
+    while (item != mapWalletModels.constEnd())
+    {
+        walletStack->removeWalletView(item.key());
+        delete item.value();
+        item++;
+    }
+    
     if(trayIcon) // Hide tray icon, as deleting will let it linger until quit (on Ubuntu)
         trayIcon->hide();
 #ifdef Q_OS_MAC
@@ -225,6 +258,12 @@ void BitcoinGUI::createActions()
     connect(addressBookAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(addressBookAction, SIGNAL(triggered()), this, SLOT(gotoAddressBookPage()));
 
+    loadWalletAction = new QAction(tr("&Load Wallet..."), this);
+    unloadWalletAction = new QAction(tr("&Unload Wallet"), this);
+    
+    connect(loadWalletAction, SIGNAL(triggered()), this, SLOT(loadWallet()));
+    connect(unloadWalletAction, SIGNAL(triggered()), this, SLOT(unloadWallet()));
+    
     quitAction = new QAction(QIcon(":/icons/quit"), tr("E&xit"), this);
     quitAction->setStatusTip(tr("Quit application"));
     quitAction->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_Q));
@@ -283,6 +322,8 @@ void BitcoinGUI::createMenuBar()
     // Configure the menus
     QMenu *file = appMenuBar->addMenu(tr("&File"));
     file->addAction(backupWalletAction);
+    file->addAction(loadWalletAction);
+    file->addAction(unloadWalletAction);
     file->addAction(exportAction);
     file->addAction(signMessageAction);
     file->addAction(verifyMessageAction);
@@ -362,16 +403,11 @@ void BitcoinGUI::setClientModel(ClientModel *clientModel)
     }
 }
 
-void BitcoinGUI::setWalletModel(WalletModel *walletModel)
-{
-    walletView->setWalletModel(walletModel);
-    return;
-}
-
 bool BitcoinGUI::addWallet(const QString& name, WalletModel *walletModel)
 {
     if (!walletStack->addWalletView(name, walletModel)) return false;
     walletList->addItem(name);
+    mapWalletModels[name] = walletModel;
     return true;
 }
 
@@ -718,6 +754,44 @@ void BitcoinGUI::incomingTransaction(const QString& date, int unit, qint64 amoun
                   .arg(type)
                   .arg(address), CClientUIInterface::MSG_INFORMATION);
 }
+
+void BitcoinGUI::loadWallet()
+{
+    if (!clientModel || !walletManager) return;
+
+    QString dataDir = GetDataDir().string().c_str();
+    QString walletFile = QFileDialog::getOpenFileName(this,
+        tr("Load Wallet"), dataDir, tr("Wallet Files (*.dat)"));
+
+    if (walletFile == "") return;
+
+    std::ostringstream err;
+    std::string walletName;
+    if (!walletManager->LoadWalletFromFile(walletFile.toStdString(), walletName, err))
+    {
+        QMessageBox errBox;
+        errBox.setText(err.str().c_str());
+        errBox.exec();
+        return;
+    }
+    WalletModel *walletModel = new WalletModel(walletManager->GetWallet(walletName).get(), clientModel->getOptionsModel());
+    addWallet(walletName.c_str(), walletModel);
+    setCurrentWallet(walletName.c_str());
+}
+
+void BitcoinGUI::unloadWallet()
+{
+    int row = walletList->currentRow();
+    if (row <= 0) return;
+    QListWidgetItem* selectedItem = walletList->takeItem(row);
+    QString walletName = selectedItem->text();
+    walletStack->removeWalletView(walletName);
+    delete selectedItem;
+    WalletModel *walletModel = mapWalletModels.take(walletName);
+    delete walletModel;
+    walletManager->UnloadWallet(walletName.toStdString());
+}
+
 
 void BitcoinGUI::dragEnterEvent(QDragEnterEvent *event)
 {

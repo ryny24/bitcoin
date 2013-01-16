@@ -125,11 +125,7 @@ public slots:
     /** Ask for passphrase to unlock wallet temporarily */
     void unlockWallet();
     
-    /** Set the encryption status as shown in the UI.
-     @param[in] status            current encryption status
-     @see WalletModel::EncryptionStatus
-     */
-    void setEncryptionStatus(int status);
+    void setEncryptionStatus();
 };
 
 #endif // WALLETVIEW_H

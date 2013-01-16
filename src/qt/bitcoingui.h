@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QSystemTrayIcon>
+#include <QMap>
 
 class TransactionTableModel;
 class WalletView;
@@ -18,6 +19,7 @@ class Notificator;
 class RPCConsole;
 
 class CWallet;
+class CWalletManager;
 
 QT_BEGIN_NAMESPACE
 class QLabel;
@@ -29,6 +31,7 @@ class QProgressBar;
 class QStackedWidget;
 class QUrl;
 class QListWidget;
+class QPushButton;
 QT_END_NAMESPACE
 
 /**
@@ -50,8 +53,8 @@ public:
         The wallet model represents a bitcoin wallet, and offers access to the list of transactions, address book and sending
         functionality.
     */
-    void setWalletModel(WalletModel *walletModel);
-    
+
+    void setWalletManager(CWalletManager *walletManager) { this->walletManager = walletManager; }
     bool addWallet(const QString& name, WalletModel *walletModel);
     bool setCurrentWallet(const QString& name);
 
@@ -64,9 +67,13 @@ protected:
 
 private:
     ClientModel *clientModel;
+    CWalletManager *walletManager;
+    QMap<QString, WalletModel*> mapWalletModels;
     QListWidget *walletList;
     WalletStack *walletStack;
     WalletView *walletView;
+    QPushButton *loadWalletButton;
+    QPushButton *unloadWalletButton;
 
     QLabel *labelEncryptionIcon;
     QLabel *labelConnectionsIcon;
@@ -92,7 +99,9 @@ private:
     QAction *changePassphraseAction;
     QAction *aboutQtAction;
     QAction *openRPCConsoleAction;
-
+    QAction *loadWalletAction;
+    QAction *unloadWalletAction;
+    
     QSystemTrayIcon *trayIcon;
     Notificator *notificator;
     TransactionView *transactionView;
@@ -158,6 +167,9 @@ public slots:
 
     /** Show incoming transaction notification for new transactions. */
     void incomingTransaction(const QString& date, int unit, qint64 amount, const QString& type, const QString& address);
+    
+    void loadWallet();
+    void unloadWallet();
 
 private slots:
     /** Show configuration dialog */

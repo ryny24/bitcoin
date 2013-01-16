@@ -186,7 +186,7 @@ void WalletView::setWalletModel(WalletModel *walletModel)
         sendCoinsPage->setModel(walletModel);
         signVerifyMessageDialog->setModel(walletModel);
 
-        gui->setEncryptionStatus(walletModel->getEncryptionStatus());
+        setEncryptionStatus();
         connect(walletModel, SIGNAL(encryptionStatusChanged(int)), gui, SLOT(setEncryptionStatus(int)));
 
         // Balloon pop-up for new transaction
@@ -301,9 +301,9 @@ void WalletView::showOutOfSyncWarning(bool fShow)
     overviewPage->showOutOfSyncWarning(fShow);
 }
 
-void WalletView::setEncryptionStatus(int status)
+void WalletView::setEncryptionStatus()
 {
-    gui->setEncryptionStatus(status);
+    gui->setEncryptionStatus(walletModel->getEncryptionStatus());
 }
 
 void WalletView::encryptWallet(bool status)
@@ -315,7 +315,7 @@ void WalletView::encryptWallet(bool status)
     dlg.setModel(walletModel);
     dlg.exec();
 
-    setEncryptionStatus(walletModel->getEncryptionStatus());
+    setEncryptionStatus();
 }
 
 void WalletView::backupWallet()

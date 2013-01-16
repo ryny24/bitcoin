@@ -93,7 +93,7 @@ public slots:
      @param[in] status            current encryption status
      @see WalletModel::EncryptionStatus
      */
-    void setEncryptionStatus(int status);
+    void setEncryptionStatus();
 };
 
 #endif // WALLETSTACK_H

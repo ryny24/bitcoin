@@ -229,15 +229,14 @@ int main(int argc, char *argv[])
 
                 ClientModel clientModel(&optionsModel);
                 window.setClientModel(&clientModel);
+                window.setWalletManager(pWalletManager);
                 
-                // Create wallet models for all wallets
-                QList<WalletModel*> listWalletModels;
+                // Create wallet models for each wallet and add it.
                 BOOST_FOREACH(const wallet_map::value_type& item, pWalletManager->GetWalletMap())
                 {
                     QString name(item.first.c_str());
                     if (name == "") name = "~Default";
                     WalletModel *walletModel = new WalletModel(item.second.get(), &optionsModel);
-                    listWalletModels.append(walletModel);
                     window.addWallet(name, walletModel);
                 }
                 window.setCurrentWallet("~Default");
@@ -259,11 +258,7 @@ int main(int argc, char *argv[])
 
                 window.hide();
                 window.setClientModel(0);
-                
-                // Delete wallet models
-                for (int i = 0; i < listWalletModels.size(); i++)
-                    delete listWalletModels.at(i);
-                
+                                
                 guiref = 0;
             }
             // Shutdown the core and its threads, but don't exit Bitcoin-Qt here

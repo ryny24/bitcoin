@@ -132,10 +132,10 @@ void WalletStack::unlockWallet()
     if (walletView) walletView->unlockWallet();
 }
 
-void WalletStack::setEncryptionStatus(int status)
+void WalletStack::setEncryptionStatus()
 {
     WalletView *walletView = (WalletView*)currentWidget();
-    if (walletView) walletView->setEncryptionStatus(status);
+    if (walletView) walletView->setEncryptionStatus();
 }
 
 void WalletStack::setCurrentWalletView(const QString& name)
@@ -143,4 +143,5 @@ void WalletStack::setCurrentWalletView(const QString& name)
     if (mapWalletViews.count(name) == 0) return;
     WalletView *walletView = mapWalletViews.value(name);
     setCurrentWidget(walletView);
+    walletView->setEncryptionStatus();
 }
