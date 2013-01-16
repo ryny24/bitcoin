@@ -5,6 +5,7 @@
 #include <QSystemTrayIcon>
 
 class TransactionTableModel;
+class WalletView;
 class ClientModel;
 class WalletModel;
 class TransactionView;
@@ -56,16 +57,7 @@ protected:
 
 private:
     ClientModel *clientModel;
-    WalletModel *walletModel;
-
-    QStackedWidget *centralWidget;
-
-    OverviewPage *overviewPage;
-    QWidget *transactionsPage;
-    AddressBookPage *addressBookPage;
-    AddressBookPage *receiveCoinsPage;
-    SendCoinsDialog *sendCoinsPage;
-    SignVerifyMessageDialog *signVerifyMessageDialog;
+    WalletView *walletView;
 
     QLabel *labelEncryptionIcon;
     QLabel *labelConnectionsIcon;
@@ -111,6 +103,22 @@ private:
     void createTrayIconMenu();
 
 public slots:
+    /** Switch to overview (home) page */
+    void gotoOverviewPage();
+    /** Switch to history (transactions) page */
+    void gotoHistoryPage();
+    /** Switch to address book page */
+    void gotoAddressBookPage();
+    /** Switch to receive coins page */
+    void gotoReceiveCoinsPage();
+    /** Switch to send coins page */
+    void gotoSendCoinsPage();
+
+    /** Show Sign/Verify Message dialog and switch to sign message tab */
+    void gotoSignMessageTab(QString addr = "");
+    /** Show Sign/Verify Message dialog and switch to verify message tab */
+    void gotoVerifyMessageTab(QString addr = "");
+    
     /** Set number of connections shown in the UI */
     void setNumConnections(int count);
     /** Set number of blocks shown in the UI */
@@ -139,23 +147,10 @@ public slots:
     void askFee(qint64 nFeeRequired, bool *payFee);
     void handleURI(QString strURI);
 
+    /** Show incoming transaction notification for new transactions. */
+    void incomingTransaction(const QString& date, int unit, qint64 amount, const QString& type, const QString& address);
+
 private slots:
-    /** Switch to overview (home) page */
-    void gotoOverviewPage();
-    /** Switch to history (transactions) page */
-    void gotoHistoryPage();
-    /** Switch to address book page */
-    void gotoAddressBookPage();
-    /** Switch to receive coins page */
-    void gotoReceiveCoinsPage();
-    /** Switch to send coins page */
-    void gotoSendCoinsPage();
-
-    /** Show Sign/Verify Message dialog and switch to sign message tab */
-    void gotoSignMessageTab(QString addr = "");
-    /** Show Sign/Verify Message dialog and switch to verify message tab */
-    void gotoVerifyMessageTab(QString addr = "");
-
     /** Show configuration dialog */
     void optionsClicked();
     /** Show about dialog */
@@ -164,11 +159,6 @@ private slots:
     /** Handle tray icon clicked */
     void trayIconActivated(QSystemTrayIcon::ActivationReason reason);
 #endif
-    /** Show incoming transaction notification for new transactions.
-
-        The new items are those between start and end inclusive, under the given parent item.
-    */
-    void incomingTransaction(const QModelIndex& parent, int start, int /*end*/);
     /** Encrypt the wallet */
     void encryptWallet(bool status);
     /** Backup the wallet */
