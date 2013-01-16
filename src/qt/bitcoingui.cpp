@@ -14,6 +14,7 @@
 #include "aboutdialog.h"
 #include "clientmodel.h"
 #include "walletmodel.h"
+#include "walletstack.h"
 #include "editaddressdialog.h"
 #include "optionsmodel.h"
 #include "transactiondescdialog.h"
@@ -101,15 +102,19 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     
     // Create wallet list control
     walletList = new QListWidget();
+    walletList->setMinimumWidth(100);
+    walletList->setMaximumWidth(100);
     
-    // Create wallet view
-    walletView = new WalletView(this);
-    walletView->setBitcoinGUI(this);
+    // Create wallet stack
+    walletStack = new WalletStack(this);
+    walletStack->setBitcoinGUI(this);
     
     walletFrameLayout->addWidget(walletList);
-    walletFrameLayout->addWidget(walletView);
+    walletFrameLayout->addWidget(walletStack);
     setCentralWidget(walletFrame);
 
+    connect(walletList, SIGNAL(currentTextChanged(const QString&)), walletStack, SLOT(setCurrentWalletView(const QString&)));
+    
     // Create status bar
     statusBar();
 
@@ -352,6 +357,8 @@ void BitcoinGUI::setClientModel(ClientModel *clientModel)
 
         // Receive and report messages from network/worker thread
         connect(clientModel, SIGNAL(message(QString,QString,unsigned int)), this, SLOT(message(QString,QString,unsigned int)));
+        
+        walletStack->setClientModel(clientModel);
     }
 }
 
@@ -359,6 +366,21 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)
 {
     walletView->setWalletModel(walletModel);
     return;
+}
+
+bool BitcoinGUI::addWallet(const QString& name, WalletModel *walletModel)
+{
+    if (!walletStack->addWalletView(name, walletModel)) return false;
+    walletList->addItem(name);
+    return true;
+}
+
+bool BitcoinGUI::setCurrentWallet(const QString& name)
+{
+    QList<QListWidgetItem*> walletItems = walletList->findItems(name, Qt::MatchExactly);
+    if (walletItems.count() == 0) return false;
+    walletList->setCurrentItem(walletItems[0]);
+    return true;
 }
 
 void BitcoinGUI::createTrayIcon()
@@ -435,37 +457,37 @@ void BitcoinGUI::aboutClicked()
 
 void BitcoinGUI::gotoOverviewPage()
 {
-    if (walletView) walletView->gotoOverviewPage();
+    if (walletStack) walletStack->gotoOverviewPage();
 }
 
 void BitcoinGUI::gotoHistoryPage()
 {
-    if (walletView) walletView->gotoHistoryPage();
+    if (walletStack) walletStack->gotoHistoryPage();
 }
 
 void BitcoinGUI::gotoAddressBookPage()
 {
-    if (walletView) walletView->gotoAddressBookPage();
+    if (walletStack) walletStack->gotoAddressBookPage();
 }
 
 void BitcoinGUI::gotoReceiveCoinsPage()
 {
-    if (walletView) walletView->gotoReceiveCoinsPage();
+    if (walletStack) walletStack->gotoReceiveCoinsPage();
 }
 
 void BitcoinGUI::gotoSendCoinsPage()
 {
-    if (walletView) walletView->gotoSendCoinsPage();
+    if (walletStack) walletStack->gotoSendCoinsPage();
 }
 
 void BitcoinGUI::gotoSignMessageTab(QString addr)
 {
-    if (walletView) walletView->gotoSignMessageTab(addr);
+    if (walletStack) walletStack->gotoSignMessageTab(addr);
 }
 
 void BitcoinGUI::gotoVerifyMessageTab(QString addr)
 {
-    if (walletView) walletView->gotoSignMessageTab(addr);
+    if (walletStack) walletStack->gotoSignMessageTab(addr);
 }
 
 void BitcoinGUI::setNumConnections(int count)
@@ -567,7 +589,7 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
         tooltip = tr("Up to date") + QString(".<br>") + tooltip;
         labelBlocksIcon->setPixmap(QIcon(":/icons/synced").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
 
-        walletView->showOutOfSyncWarning(false);
+        walletStack->showOutOfSyncWarning(false);
     }
     else
     {
@@ -575,7 +597,7 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
         labelBlocksIcon->setMovie(syncIconMovie);
         syncIconMovie->start();
 
-        walletView->showOutOfSyncWarning(true);
+        walletStack->showOutOfSyncWarning(true);
     }
 
     if(!text.isEmpty())
@@ -712,13 +734,13 @@ void BitcoinGUI::dropEvent(QDropEvent *event)
         QList<QUrl> uris = event->mimeData()->urls();
         foreach(const QUrl &uri, uris)
         {
-            if (walletView->handleURI(uri.toString()))
+            if (walletStack->handleURI(uri.toString()))
                 nValidUrisFound++;
         }
 
         // if valid URIs were found
         if (nValidUrisFound)
-            walletView->gotoSendCoinsPage();
+            walletStack->gotoSendCoinsPage();
         else
             message(tr("URI handling"), tr("URI can not be parsed! This can be caused by an invalid Bitcoin address or malformed URI parameters."),
                       CClientUIInterface::ICON_WARNING);
@@ -742,7 +764,7 @@ bool BitcoinGUI::eventFilter(QObject *object, QEvent *event)
 void BitcoinGUI::handleURI(QString strURI)
 {
     // URI has to be valid
-    if (!walletView->handleURI(strURI))
+    if (!walletStack->handleURI(strURI))
         message(tr("URI handling"), tr("URI can not be parsed! This can be caused by an invalid Bitcoin address or malformed URI parameters."),
                      CClientUIInterface::ICON_WARNING);
 }
@@ -778,22 +800,22 @@ void BitcoinGUI::setEncryptionStatus(int status)
 
 void BitcoinGUI::encryptWallet(bool status)
 {
-    walletView->encryptWallet(status);
+    walletStack->encryptWallet(status);
 }
 
 void BitcoinGUI::backupWallet()
 {
-    walletView->backupWallet();
+    walletStack->backupWallet();
 }
 
 void BitcoinGUI::changePassphrase()
 {
-    walletView->changePassphrase();
+    walletStack->changePassphrase();
 }
 
 void BitcoinGUI::unlockWallet()
 {
-    walletView->unlockWallet();
+    walletStack->unlockWallet();
 }
 
 void BitcoinGUI::showNormalIfMinimized(bool fToggleHidden)

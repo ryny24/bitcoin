@@ -8,6 +8,7 @@ class TransactionTableModel;
 class WalletView;
 class ClientModel;
 class WalletModel;
+class WalletStack;
 class TransactionView;
 class OverviewPage;
 class AddressBookPage;
@@ -15,6 +16,8 @@ class SendCoinsDialog;
 class SignVerifyMessageDialog;
 class Notificator;
 class RPCConsole;
+
+class CWallet;
 
 QT_BEGIN_NAMESPACE
 class QLabel;
@@ -48,6 +51,9 @@ public:
         functionality.
     */
     void setWalletModel(WalletModel *walletModel);
+    
+    bool addWallet(const QString& name, WalletModel *walletModel);
+    bool setCurrentWallet(const QString& name);
 
 protected:
     void changeEvent(QEvent *e);
@@ -59,6 +65,7 @@ protected:
 private:
     ClientModel *clientModel;
     QListWidget *walletList;
+    WalletStack *walletStack;
     WalletView *walletView;
 
     QLabel *labelEncryptionIcon;

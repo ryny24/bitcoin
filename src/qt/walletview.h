@@ -35,7 +35,7 @@ class WalletView : public QStackedWidget
 {
     Q_OBJECT
 public:
-    explicit WalletView(QWidget *parent = 0);
+    explicit WalletView(QWidget *parent, BitcoinGUI *_gui);
     ~WalletView();
 
     void setBitcoinGUI(BitcoinGUI *gui);
@@ -132,4 +132,4 @@ public slots:
     void setEncryptionStatus(int status);
 };
 
-#endif // BITCOINGUI_H
+#endif // WALLETVIEW_H

@@ -33,8 +33,9 @@
 #include <QDesktopServices>
 #include <QFileDialog>
 
-WalletView::WalletView(QWidget *parent):
+WalletView::WalletView(QWidget *parent, BitcoinGUI *_gui):
     QStackedWidget(parent),
+    gui(_gui),
     clientModel(0),
     walletModel(0),
     encryptWalletAction(0),
@@ -56,9 +57,9 @@ WalletView::WalletView(QWidget *parent):
 
     receiveCoinsPage = new AddressBookPage(AddressBookPage::ForEditing, AddressBookPage::ReceivingTab);
 
-    sendCoinsPage = new SendCoinsDialog(this);
+    sendCoinsPage = new SendCoinsDialog(gui);
 
-    signVerifyMessageDialog = new SignVerifyMessageDialog(this);
+    signVerifyMessageDialog = new SignVerifyMessageDialog(gui);
 
     addWidget(overviewPage);
     addWidget(transactionsPage);
