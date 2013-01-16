@@ -56,6 +56,7 @@
 #include <QDragEnterEvent>
 #include <QUrl>
 #include <QStyle>
+#include <QListWidget>
 
 #include <iostream>
 
@@ -94,10 +95,20 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     // Create system tray icon and notification
     createTrayIcon();
 
+    // Create wallet list and view
+    QFrame *walletFrame = new QFrame();
+    QHBoxLayout *walletFrameLayout = new QHBoxLayout(walletFrame);
+    
+    // Create wallet list control
+    walletList = new QListWidget();
+    
     // Create wallet view
     walletView = new WalletView(this);
     walletView->setBitcoinGUI(this);
-    setCentralWidget(walletView);
+    
+    walletFrameLayout->addWidget(walletList);
+    walletFrameLayout->addWidget(walletView);
+    setCentralWidget(walletFrame);
 
     // Create status bar
     statusBar();

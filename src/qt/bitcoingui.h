@@ -25,6 +25,7 @@ class QModelIndex;
 class QProgressBar;
 class QStackedWidget;
 class QUrl;
+class QListWidget;
 QT_END_NAMESPACE
 
 /**
@@ -57,6 +58,7 @@ protected:
 
 private:
     ClientModel *clientModel;
+    QListWidget *walletList;
     WalletView *walletView;
 
     QLabel *labelEncryptionIcon;
