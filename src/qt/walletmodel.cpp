@@ -34,10 +34,7 @@ WalletModel::WalletModel(CWallet *wallet, OptionsModel *optionsModel, QObject *p
 
 WalletModel::~WalletModel()
 {
-    unsubscribeFromCoreSignals();
-    QMessageBox box;
-    box.setText("WalletModel destructor called.");
-    box.exec();
+    //unsubscribeFromCoreSignals();
 }
 
 qint64 WalletModel::getBalance() const

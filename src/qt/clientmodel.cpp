@@ -29,7 +29,7 @@ ClientModel::ClientModel(OptionsModel *optionsModel, QObject *parent) :
 
 ClientModel::~ClientModel()
 {
-    unsubscribeFromCoreSignals();
+    //unsubscribeFromCoreSignals();
 }
 
 int ClientModel::getNumConnections() const
