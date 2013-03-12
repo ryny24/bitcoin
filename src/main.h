@@ -189,6 +189,7 @@ CBlockIndex * InsertBlockIndex(uint256 hash);
 bool VerifySignature(const CCoins& txFrom, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType);
 /** Abort with a message */
 bool AbortNode(const std::string &msg);
+void InvalidBlockFound(CBlockIndex *pindex);
 
 
 

@@ -1208,12 +1208,19 @@ void static InvalidChainFound(CBlockIndex* pindexNew)
         printf("InvalidChainFound: Warning: Displayed transactions may not be correct! You may need to upgrade, or other nodes may need to upgrade.\n");
 }
 
-void static InvalidBlockFound(CBlockIndex *pindex) {
+void InvalidBlockFound(CBlockIndex *pindex) {
     pindex->nStatus |= BLOCK_FAILED_VALID;
     pblocktree->WriteBlockIndex(CDiskBlockIndex(pindex));
     setBlockIndexValid.erase(pindex);
     InvalidChainFound(pindex);
+    CBlockIndex *pindexWalk = pindex;
+    while (pindexWalk->pnext) {
+        pindexWalk = pindexWalk->pnext;
+        pindexWalk->nStatus |= BLOCK_FAILED_CHILD;
+        printf("Marked %s as descending from invalid\n", BlockHashStr(pindexWalk->GetBlockHash()).c_str());
+    }
     if (pindex->pnext) {
+        setBlockIndexValid.insert(pindex->pprev);
         CValidationState stateDummy;
         ConnectBestBlock(stateDummy); // reorganise away from the failed block
     }
@@ -1225,13 +1232,21 @@ bool ConnectBestBlock(CValidationState &state) {
 
         {
             std::set<CBlockIndex*,CBlockIndexWorkComparator>::reverse_iterator it = setBlockIndexValid.rbegin();
+            while (it != setBlockIndexValid.rend() && (*it)->nStatus & BLOCK_FAILED_MASK) {
+                printf("Not considering failed %s (%i)\n", BlockHashStr((*it)->GetBlockHash()).c_str(), (*it)->nHeight);
+                it++;
+            }
             if (it == setBlockIndexValid.rend())
                 return true;
             pindexNewBest = *it;
         }
 
-        if (pindexNewBest == pindexBest || (pindexBest && pindexNewBest->bnChainWork == pindexBest->bnChainWork))
+        printf("Considering  %s (%i)\n", BlockHashStr(pindexNewBest->GetBlockHash()).c_str(), pindexNewBest->nHeight);
+
+        if ((pindexNewBest == pindexBest || (pindexBest && pindexNewBest->bnChainWork == pindexBest->bnChainWork)) && !(pindexBest->nStatus & BLOCK_FAILED_MASK))
             return true; // nothing to do
+
+        printf("Checking ancestry %s (%i)\n", BlockHashStr(pindexNewBest->GetBlockHash()).c_str(), pindexNewBest->nHeight);
 
         // check ancestry
         CBlockIndex *pindexTest = pindexNewBest;
@@ -1250,7 +1265,7 @@ bool ConnectBestBlock(CValidationState &state) {
                 break;
             }
 
-            if (pindexBest == NULL || pindexTest->bnChainWork > pindexBest->bnChainWork)
+            if (pindexBest == NULL || pindexTest->bnChainWork > pindexBest->bnChainWork || (pindexBest->nStatus & BLOCK_FAILED_MASK))
                 vAttach.push_back(pindexTest);
 
             if (pindexTest->pprev == NULL || pindexTest->pnext != NULL) {
