@@ -5,8 +5,10 @@
 #ifndef BITCOIN_INIT_H
 #define BITCOIN_INIT_H
 
+#include "walletmanager.h"
 #include "wallet.h"
 
+extern CWalletManager* pWalletManager;
 extern CWallet* pwalletMain;
 
 void StartShutdown();
